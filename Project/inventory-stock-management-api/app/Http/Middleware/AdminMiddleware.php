@@ -20,7 +20,7 @@ class AdminMiddleware
         if ($request->user()->role !== 'administrator') {
             return response()->json([
                 'success' => false,
-                'message' => 'Forbidden. Administrator only.'
+                'message' => 'Forbidden. Admin only.'
             ], 403);
         }
 

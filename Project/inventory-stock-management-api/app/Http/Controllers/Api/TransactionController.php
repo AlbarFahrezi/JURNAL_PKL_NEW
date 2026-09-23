@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use App\Models\TransactionLog;
+use App\Rules\StockAvailable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -280,6 +281,29 @@ class TransactionController extends Controller
             ],
         ]);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Custom Validation Rule: StockAvailable
+        |--------------------------------------------------------------------------
+        |
+        | Check stock availability when transaction type is OUT.
+        | This validation happens when creating the draft.
+        |
+        */
+
+        $stockRules = [];
+
+        foreach ($validated['details'] as $index => $detail) {
+            $stockRules["details.{$index}.quantity"] = [
+                new StockAvailable(
+                    (int) $detail['product_id'],
+                    $validated['type']
+                ),
+            ];
+        }
+
+        $request->validate($stockRules);
+
         $transaction = DB::transaction(function () use (
             $validated,
             $request
@@ -483,6 +507,28 @@ class TransactionController extends Controller
                 'min:1',
             ],
         ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Custom Validation Rule: StockAvailable
+        |--------------------------------------------------------------------------
+        |
+        | Check stock availability when updated transaction is OUT.
+        |
+        */
+
+        $stockRules = [];
+
+        foreach ($validated['details'] as $index => $detail) {
+            $stockRules["details.{$index}.quantity"] = [
+                new StockAvailable(
+                    (int) $detail['product_id'],
+                    $validated['type']
+                ),
+            ];
+        }
+
+        $request->validate($stockRules);
 
         try {
             $transaction = DB::transaction(function () use (
@@ -691,8 +737,7 @@ class TransactionController extends Controller
                 /*
                  * Dispatch event synchronously.
                  *
-                 * HandleTransactionCompleted is automatically
-                 * discovered by Laravel and performs:
+                 * HandleTransactionCompleted performs:
                  * - master data validation
                  * - stock validation
                  * - stock update

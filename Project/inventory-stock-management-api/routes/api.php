@@ -9,13 +9,21 @@ use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\StockController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\TransactionController;
+use App\Http\Controllers\Api\ReportController;
 
 // =====================================================
 // AUTHENTICATION
 // =====================================================
 
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [
+    AuthController::class,
+    'register'
+]);
+
+Route::post('/login', [
+    AuthController::class,
+    'login'
+]);
 
 
 // =====================================================
@@ -40,13 +48,18 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     // -------------------------------------------------
-    // DASHBOARD & STOCK HISTORY
+    // DASHBOARD
     // -------------------------------------------------
 
     Route::get('/dashboard', [
         DashboardController::class,
         'index'
     ]);
+
+
+    // -------------------------------------------------
+    // STOCK HISTORY
+    // -------------------------------------------------
 
     Route::get('/stock-history', [
         StockController::class,
@@ -102,46 +115,138 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     // =================================================
+    // REPORTS
+    // =================================================
+
+    /*
+    |--------------------------------------------------------------------------
+    | Laporan Harian
+    |--------------------------------------------------------------------------
+    |
+    | Contoh:
+    | GET /api/reports/daily
+    | GET /api/reports/daily?date=2026-09-30
+    |
+    */
+
+    Route::get('/reports/daily', [
+        ReportController::class,
+        'daily'
+    ]);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Laporan Periode
+    |--------------------------------------------------------------------------
+    |
+    | Contoh:
+    | GET /api/reports/period?date_from=2026-09-01&date_to=2026-09-30
+    |
+    | Summary:
+    | GET /api/reports/period?date_from=2026-09-01&date_to=2026-09-30&view=summary
+    |
+    | Detail:
+    | GET /api/reports/period?date_from=2026-09-01&date_to=2026-09-30&view=detail
+    |
+    | Filter IN:
+    | GET /api/reports/period?date_from=2026-09-01&date_to=2026-09-30&type=IN
+    |
+    | Filter OUT:
+    | GET /api/reports/period?date_from=2026-09-01&date_to=2026-09-30&type=OUT
+    |
+    */
+
+    Route::get('/reports/period', [
+        ReportController::class,
+        'period'
+    ]);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Statistik Laporan
+    |--------------------------------------------------------------------------
+    |
+    | Menghasilkan:
+    | - total transaksi
+    | - total nilai
+    | - rata-rata
+    | - nilai tertinggi
+    | - nilai terendah
+    | - persentase perubahan
+    |
+    */
+
+    Route::get('/reports/statistics', [
+        ReportController::class,
+        'statistics'
+    ]);
+
+
+    // =================================================
     // ADMIN ONLY
     // =================================================
 
     Route::middleware('admin')->group(function () {
 
-        // Master Data - Category
+        // -------------------------------------------------
+        // MASTER DATA - CATEGORY
+        // -------------------------------------------------
+
         Route::apiResource(
             'categories',
             CategoryController::class
         );
 
-        // Master Data - Supplier
+
+        // -------------------------------------------------
+        // MASTER DATA - SUPPLIER
+        // -------------------------------------------------
+
         Route::apiResource(
             'suppliers',
             SupplierController::class
         );
 
-        // Master Data - Warehouse
+
+        // -------------------------------------------------
+        // MASTER DATA - WAREHOUSE
+        // -------------------------------------------------
+
         Route::apiResource(
             'warehouses',
             WarehouseController::class
         );
 
-        // Master Data - Product
+
+        // -------------------------------------------------
+        // MASTER DATA - PRODUCT
+        // -------------------------------------------------
+
         Route::apiResource(
             'products',
             ProductController::class
         );
 
-        // Manual Stock Management
+
+        // -------------------------------------------------
+        // MANUAL STOCK MANAGEMENT
+        // -------------------------------------------------
+
+        // Stock In
         Route::post('/stock-in', [
             StockController::class,
             'stockIn'
         ]);
 
+        // Stock Out
         Route::post('/stock-out', [
             StockController::class,
             'stockOut'
         ]);
 
+        // Stock Adjustment
         Route::post('/stock-adjustment', [
             StockController::class,
             'stockAdjustment'

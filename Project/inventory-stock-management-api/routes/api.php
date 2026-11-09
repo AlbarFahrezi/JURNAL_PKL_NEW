@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Support\Facades\Route;
@@ -118,16 +119,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // REPORTS
     // =================================================
 
-    /*
-    |--------------------------------------------------------------------------
-    | Laporan Harian
-    |--------------------------------------------------------------------------
-    |
-    | Contoh:
-    | GET /api/reports/daily
-    | GET /api/reports/daily?date=2026-09-30
-    |
-    */
+    // Laporan Harian
+    // GET /api/reports/daily
+    // GET /api/reports/daily?date=2026-09-30
 
     Route::get('/reports/daily', [
         ReportController::class,
@@ -135,27 +129,21 @@ Route::middleware('auth:sanctum')->group(function () {
     ]);
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Laporan Periode
-    |--------------------------------------------------------------------------
-    |
-    | Contoh:
-    | GET /api/reports/period?date_from=2026-09-01&date_to=2026-09-30
-    |
-    | Summary:
-    | GET /api/reports/period?date_from=2026-09-01&date_to=2026-09-30&view=summary
-    |
-    | Detail:
-    | GET /api/reports/period?date_from=2026-09-01&date_to=2026-09-30&view=detail
-    |
-    | Filter IN:
-    | GET /api/reports/period?date_from=2026-09-01&date_to=2026-09-30&type=IN
-    |
-    | Filter OUT:
-    | GET /api/reports/period?date_from=2026-09-01&date_to=2026-09-30&type=OUT
-    |
-    */
+    // -------------------------------------------------
+    // LAPORAN PERIODE
+    // -------------------------------------------------
+
+    // Summary:
+    // GET /api/reports/period?date_from=2026-09-01&date_to=2026-09-30&view=summary
+
+    // Detail:
+    // GET /api/reports/period?date_from=2026-09-01&date_to=2026-09-30&view=detail
+
+    // Filter IN:
+    // GET /api/reports/period?date_from=2026-09-01&date_to=2026-09-30&type=IN
+
+    // Filter OUT:
+    // GET /api/reports/period?date_from=2026-09-01&date_to=2026-09-30&type=OUT
 
     Route::get('/reports/period', [
         ReportController::class,
@@ -163,24 +151,45 @@ Route::middleware('auth:sanctum')->group(function () {
     ]);
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Statistik Laporan
-    |--------------------------------------------------------------------------
-    |
-    | Menghasilkan:
-    | - total transaksi
-    | - total nilai
-    | - rata-rata
-    | - nilai tertinggi
-    | - nilai terendah
-    | - persentase perubahan
-    |
-    */
+    // -------------------------------------------------
+    // STATISTIK LAPORAN
+    // -------------------------------------------------
+
+    // Menghasilkan:
+    // - Total transaksi
+    // - Total nilai
+    // - Rata-rata
+    // - Nilai tertinggi
+    // - Nilai terendah
+    // - Persentase perubahan
 
     Route::get('/reports/statistics', [
         ReportController::class,
         'statistics'
+    ]);
+
+
+    // -------------------------------------------------
+    // EXPORT LAPORAN PDF
+    // -------------------------------------------------
+
+    // GET /api/reports/export/pdf?date_from=2026-09-01&date_to=2026-09-30&view=summary
+
+    Route::get('/reports/export/pdf', [
+        ReportController::class,
+        'exportPdf'
+    ]);
+
+
+    // -------------------------------------------------
+    // EXPORT LAPORAN EXCEL
+    // -------------------------------------------------
+
+    // GET /api/reports/export/excel?date_from=2026-09-01&date_to=2026-09-30&view=summary
+
+    Route::get('/reports/export/excel', [
+        ReportController::class,
+        'exportExcel'
     ]);
 
 

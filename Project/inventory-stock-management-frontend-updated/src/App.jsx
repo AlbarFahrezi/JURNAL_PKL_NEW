@@ -1,7 +1,35 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from './services/api';
 import { login, register } from './services/auth';
 import './App.css';
+
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
+window.ChartJS = ChartJS;
+
+import { Line, Doughnut } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 const emptyPagination = {
   current_page: 1,
@@ -20,6 +48,17 @@ function messageFromError(error) {
   }
 
   return data?.message || error?.message || 'Terjadi kesalahan.';
+}
+
+function showToast(message, type = 'success') {
+  window.dispatchEvent(
+    new CustomEvent('app-toast', {
+      detail: {
+        message,
+        type,
+      },
+    })
+  );
 }
 
 /*
@@ -126,29 +165,197 @@ function Dashboard({ user }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [period, setPeriod] = useState('7days');
 
-  const load = async () => {
-    setLoading(true);
+  const load = useCallback(async (showLoading = false) => {
+    if (showLoading) {
+      setLoading(true);
+    }
+
     setError('');
 
     try {
-      setData(unwrap(await api.get('/dashboard')));
+      const response = await api.get('/dashboard', {
+        params: { period },
+      });
+
+      setData(unwrap(response));
     } catch (e) {
       setError(messageFromError(e));
     } finally {
       setLoading(false);
     }
-  };
+  }, [period]);
 
   useEffect(() => {
-    load();
-  }, []);
+    load(true);
 
-  if (loading) {
+    const interval = setInterval(() => {
+      load(false);
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [load]);
+
+  const numberFormat = (value) =>
+    Number(value ?? 0).toLocaleString('id-ID');
+
+const stockTrend = Array.isArray(data?.stock_trend)
+  ? data.stock_trend
+  : [];
+
+const rawCategories = data?.category_composition;
+
+const categories = Array.isArray(rawCategories)
+  ? rawCategories
+  : Array.isArray(rawCategories?.data)
+    ? rawCategories.data
+    : Array.isArray(rawCategories?.categories)
+      ? rawCategories.categories
+      : [];
+
+console.log('RAW CATEGORY:', rawCategories);
+console.log('FINAL CATEGORY:', categories);
+console.log('FINAL CATEGORY LENGTH:', categories.length);      
+
+const rawTransactions = data?.transaction_composition;
+
+const transactions = Array.isArray(rawTransactions)
+  ? rawTransactions
+  : Array.isArray(rawTransactions?.data)
+    ? rawTransactions.data
+    : [];
+
+console.log('CATEGORY COMPOSITION:', data?.category_composition);
+console.log('CATEGORY IS ARRAY:', Array.isArray(data?.category_composition));
+console.log('CATEGORY TYPE:', typeof data?.category_composition);
+
+  const stockChartData = {
+    labels: stockTrend.map((item) => item.date),
+    datasets: [
+      {
+        label: 'Stock In',
+        data: stockTrend.map((item) => item.stock_in),
+        borderColor: '#16a34a',
+        backgroundColor: 'rgba(22, 163, 74, 0.12)',
+        tension: 0.35,
+        fill: true,
+      },
+      {
+        label: 'Stock Out',
+        data: stockTrend.map((item) => item.stock_out),
+        borderColor: '#dc2626',
+        backgroundColor: 'rgba(220, 38, 38, 0.08)',
+        tension: 0.35,
+        fill: true,
+      },
+      {
+        label: 'Adjustment',
+        data: stockTrend.map((item) => item.adjustment),
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+        tension: 0.35,
+        fill: false,
+      },
+    ],
+  };
+
+  const stockChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      intersect: false,
+      mode: 'index',
+    },
+    plugins: {
+      legend: {
+        position: 'bottom',
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          precision: 0,
+        },
+      },
+    },
+  };
+
+  const categoryChartData = {
+    labels: categories.map((item) => item.name),
+    datasets: [
+      {
+        label: 'Jumlah Produk',
+        data: categories.map((item) =>
+          Number(item.total_products)
+        ),
+        backgroundColor: [
+          '#2563eb',
+          '#16a34a',
+          '#f59e0b',
+          '#dc2626',
+          '#8b5cf6',
+          '#06b6d4',
+          '#ec4899',
+          '#64748b',
+          '#84cc16',
+          '#f97316',
+          '#14b8a6',
+        ],
+        borderWidth: 2,
+        borderColor: '#ffffff',
+      },
+    ],
+  };
+
+    console.log('CATEGORY CHART LABELS:', categoryChartData.labels);
+  console.log(
+    'CATEGORY CHART VALUES:',
+    categoryChartData.datasets[0].data
+  );
+
+
+  const transactionLabels = {
+    draft: 'Draft',
+    completed: 'Selesai',
+    cancelled: 'Dibatalkan',
+  };
+
+  const transactionChartData = {
+    labels: transactions.map(
+      (item) => transactionLabels[item.status] || item.status
+    ),
+    datasets: [
+      {
+        label: 'Jumlah Transaksi',
+        data: transactions.map((item) => Number(item.total)),
+        backgroundColor: [
+          '#f59e0b',
+          '#16a34a',
+          '#dc2626',
+        ],
+        borderWidth: 2,
+        borderColor: '#ffffff',
+      },
+    ],
+  };
+
+  const doughnutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+      },
+    },
+  };
+
+  if (loading && !data) {
     return (
       <PageTitle
         title="Dashboard"
-        subtitle="Ringkasan inventory berdasarkan role."
+        subtitle="Memuat ringkasan inventory..."
         loading
       />
     );
@@ -159,57 +366,151 @@ function Dashboard({ user }) {
       <PageTitle
         title="Dashboard"
         subtitle={`Selamat datang, ${user?.name || 'User'} (${user?.role || '-'})`}
-        action={<button onClick={load}>Refresh</button>}
+        action={
+          <button onClick={() => load(false)} disabled={loading}>
+            {loading ? 'Memuat...' : 'Refresh'}
+          </button>
+        }
       />
 
       {error && <Alert>{error}</Alert>}
 
       {data && (
-        <div className="stats-grid">
-          <Stat
-            title="Total Produk"
-            value={data.total_products}
-          />
+        <>
+          <div className="dashboard-toolbar">
+            <div>
+              <strong>Statistik Inventory</strong>
+              <span>Data diperbarui otomatis setiap 60 detik</span>
+            </div>
 
-          <Stat
-            title="Total Stok"
-            value={data.total_stock}
-          />
+            <select
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+            >
+              <option value="7days">7 Hari Terakhir</option>
+              <option value="30days">30 Hari Terakhir</option>
+              <option value="year">Tahun Ini</option>
+            </select>
+          </div>
 
-          {user?.role === 'administrator' && (
-            <>
-              <Stat
-                title="Kategori"
-                value={data.total_categories}
+          <div className="stats-grid">
+            <Stat title="Total Produk" value={data.total_products} />
+            <Stat title="Total Stok" value={data.total_stock} />
+            <Stat title="Stok Rendah" value={data.low_stock_count} />
+            <Stat title="Stok Habis" value={data.out_of_stock_count} />
+            <Stat title="Stock In Hari Ini" value={data.stock_in_today} />
+            <Stat title="Stock Out Hari Ini" value={data.stock_out_today} />
+
+            {user?.role === 'administrator' && (
+              <>
+                <Stat title="Total Kategori" value={data.total_categories} />
+                <Stat title="Total Supplier" value={data.total_suppliers} />
+                <Stat title="Total Warehouse" value={data.total_warehouses} />
+                <Stat
+                  title="Adjustment Hari Ini"
+                  value={data.stock_adjustment_today}
+                />
+              </>
+            )}
+          </div>
+
+          <section className="dashboard-chart-card">
+            <div className="dashboard-chart-header">
+              <div>
+                <h3>Pergerakan Stok</h3>
+                <p>Grafik Stock In, Stock Out, dan Adjustment</p>
+              </div>
+            </div>
+
+            <div className="dashboard-line-chart">
+              <Line
+                data={stockChartData}
+                options={stockChartOptions}
               />
+            </div>
+          </section>
 
-              <Stat
-                title="Supplier"
-                value={data.total_suppliers}
-              />
+          <div className="dashboard-chart-grid">
+            <section className="dashboard-chart-card">
+              <div className="dashboard-chart-header">
+                <div>
+                  <h3>Komposisi Kategori</h3>
+                  <p>Jumlah produk pada setiap kategori</p>
+                </div>
+              </div>
 
-              <Stat
-                title="Warehouse"
-                value={data.total_warehouses}
-              />
+              <div className="dashboard-doughnut-chart">
+                <Doughnut
+                  data={categoryChartData}
+                  options={doughnutOptions}
+                />
+              </div>
+            </section>
 
-              <Stat
-                title="Adjustment Hari Ini"
-                value={data.stock_adjustment_today}
-              />
-            </>
-          )}
+            <section className="dashboard-chart-card">
+              <div className="dashboard-chart-header">
+                <div>
+                  <h3>Status Transaksi</h3>
+                  <p>Seluruh transaksi berdasarkan status</p>
+                </div>
+              </div>
 
-          <Stat
-            title="Stock In Hari Ini"
-            value={data.stock_in_today}
-          />
+              <div className="dashboard-doughnut-chart">
+                <Doughnut
+                  data={transactionChartData}
+                  options={doughnutOptions}
+                />
+              </div>
+            </section>
+          </div>
 
-          <Stat
-            title="Stock Out Hari Ini"
-            value={data.stock_out_today}
-          />
-        </div>
+          <section className="dashboard-chart-card">
+            <div className="dashboard-chart-header">
+              <div>
+                <h3>Daftar Stok Rendah</h3>
+                <p>
+                  Produk dengan stok antara 1 sampai{' '}
+                  {data.low_stock_threshold}
+                </p>
+              </div>
+            </div>
+
+            {data.low_stock_products?.length > 0 ? (
+              <div className="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nama Produk</th>
+                      <th>SKU</th>
+                      <th>Sisa Stok</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.low_stock_products.map((product) => (
+                      <tr key={product.id}>
+                        <td>{product.name}</td>
+                        <td>{product.sku}</td>
+                        <td>
+                          <span className="stock-low">
+                            {numberFormat(product.stock)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="dashboard-empty">
+                Tidak ada produk dengan stok rendah.
+              </p>
+            )}
+          </section>
+
+          <div className="dashboard-last-updated">
+            Terakhir diperbarui: {data.last_updated || '-'}
+          </div>
+        </>
       )}
     </>
   );
@@ -768,6 +1069,9 @@ function ProductPage({ canManage }) {
   const [error, setError] =
     useState('');
 
+  const [exportLoading, setExportLoading] =
+  useState('');  
+
   const [success, setSuccess] =
     useState('');
 
@@ -1060,6 +1364,12 @@ function ProductPage({ canManage }) {
           )
         }
       />
+
+      {loading && (
+  <div className="loading-message">
+    Memuat data produk...
+  </div>
+)}
 
       {success && (
         <Alert type="success">
@@ -1544,23 +1854,28 @@ function StockPage() {
   const [loading, setLoading] =
     useState(false);
 
-  useEffect(() => {
-    api.get('/products', {
-      params: {
-        per_page: 100,
-      },
-    })
-      .then((r) =>
-        setProducts(
-          unwrap(r) || []
-        )
-      )
-      .catch((e) =>
-        setError(
-          messageFromError(e)
-        )
-      );
-  }, []);
+ useEffect(() => {
+  const loadProducts = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await api.get('/products', {
+        params: {
+          per_page: 100,
+        },
+      });
+
+      setProducts(unwrap(response) || []);
+    } catch (e) {
+      setError(messageFromError(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadProducts();
+}, []);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -3069,9 +3384,66 @@ function ReportPage() {
     }
   };
 
-  useEffect(() => {
-  load();
-}, []);
+
+  
+const exportReport = async (format) => {
+  if (mode !== 'period' || !report) {
+    setError('Export hanya tersedia untuk laporan periode.');
+    window.alert('Export hanya tersedia untuk laporan periode.');
+    return;
+  }
+
+  setError('');
+
+  try {
+    const response = await api.get(
+      `/reports/export/${format}`,
+      {
+        params: {
+          date_from: dateFrom,
+          date_to: dateTo,
+          view,
+          type: type || undefined,
+        },
+        responseType: 'blob',
+      }
+    );
+
+    const blob = new Blob(
+      [response.data],
+      {
+        type: format === 'pdf'
+          ? 'application/pdf'
+          : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      }
+    );
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = `laporan-${dateFrom}-sampai-${dateTo}.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.URL.revokeObjectURL(url);
+
+    if (format === 'pdf') {
+      window.alert('Laporan PDF berhasil diunduh!');
+    } else {
+      window.alert('Laporan Excel berhasil diunduh!');
+    }
+
+  } catch (e) {
+    setError('Gagal mengunduh laporan. Silakan coba lagi.');
+    window.alert('Gagal mengunduh laporan. Silakan coba lagi.');
+
+    console.error('Export error:', e);
+  }
+};
+
 
 const summary =
   report?.summary || null;
@@ -3339,6 +3711,20 @@ const transactions =
             >
               🖨 Print
             </button>
+
+             <button
+    onClick={() => exportReport('pdf')}
+    disabled={!report || mode !== 'period'}
+  >
+    📄 Export PDF
+  </button>
+
+  <button
+    onClick={() => exportReport('excel')}
+    disabled={!report || mode !== 'period'}
+  >
+    📊 Export Excel
+  </button>
           </div>
         }
       />
@@ -3471,6 +3857,13 @@ const transactions =
           </button>
         </div>
       </section>
+
+      {loading && (
+  <div className="loading-message">
+    Memuat laporan...
+  </div>
+)}
+
 
       {loading ? (
         <section className="card">
@@ -4090,11 +4483,65 @@ function App() {
   const [view, setView] =
     useState('dashboard');
 
+  const [viewHistory, setViewHistory] = useState([]);
+
   const [booting, setBooting] =
     useState(Boolean(token));
 
   const [authError, setAuthError] =
     useState('');
+
+  const [showBackToTop, setShowBackToTop] =
+    useState(false);
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+  };
+
+  const navigateTo = (nextView) => {
+    if (nextView === view) return;
+
+    setViewHistory((prev) => [...prev, view]);
+    setView(nextView);
+    scrollToTop();
+  };
+
+  const goBack = () => {
+    if (viewHistory.length === 0) return;
+
+    const previousView = viewHistory[viewHistory.length - 1];
+
+    setViewHistory((prev) => prev.slice(0, -1));
+    setView(previousView);
+    scrollToTop();
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(
+        window.scrollY > 300
+      );
+    };
+
+    window.addEventListener(
+      'scroll',
+      handleScroll,
+      { passive: true }
+    );
+
+    handleScroll();
+
+    return () => {
+      window.removeEventListener(
+        'scroll',
+        handleScroll
+      );
+    };
+  }, []);
+
 
   useEffect(() => {
     if (!token) {
@@ -4136,6 +4583,7 @@ function App() {
     setToken(null);
     setUser(null);
     setView('dashboard');
+    setViewHistory([]);
   };
 
   if (!token) {
@@ -4167,74 +4615,83 @@ function App() {
     'administrator';
 
   const nav = [
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: '⌂',
-    },
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: '⌂',
+    section: 'UTAMA',
+  },
+  
+  {
+    id: 'reports',
+    label: 'Reports',
+    icon: '▥',
+    section: 'UTAMA',
+  },
 
-    {
-      id: 'reports',
-      label: 'Reports',
-      icon: '▥',
-    },
+  ...(admin
+    ? [
+        {
+          id: 'products',
+          label: 'Products',
+          icon: '▣',
+          section: 'INVENTORY',
+        },
+        {
+          id: 'categories',
+          label: 'Categories',
+          icon: '◫',
+          section: 'INVENTORY',
+        },
+        {
+          id: 'suppliers',
+          label: 'Suppliers',
+          icon: '♙',
+          section: 'INVENTORY',
+        },
+        {
+          id: 'warehouses',
+          label: 'Warehouses',
+          icon: '⌂',
+          section: 'INVENTORY',
+        },
+      ]
+    : []),
 
-    ...(admin
-      ? [
-          {
-            id: 'products',
-            label: 'Products',
-            icon: '▣',
-          },
+  ...(admin
+    ? [
+        {
+          id: 'stock',
+          label: 'Stock Management',
+          icon: '↕',
+          section: 'INVENTORY',
+        },
+      ]
+    : []),
 
-          {
-            id: 'categories',
-            label: 'Categories',
-            icon: '◫',
-          },
+  {
+    id: 'history',
+    label: 'Stock History',
+    icon: '▤',
+    section: 'INVENTORY',
+  },
+  {
+    id: 'transactions',
+    label: 'Transactions',
+    icon: '⇄',
+    section: 'TRANSAKSI',
+  },
+  {
+    id: 'profile',
+    label: 'Profile',
+    icon: '◉',
+    section: 'AKUN',
+  },
+];
 
-          {
-            id: 'suppliers',
-            label: 'Suppliers',
-            icon: '♙',
-          },
-
-          {
-            id: 'warehouses',
-            label: 'Warehouses',
-            icon: '⌂',
-          },
-        ]
-      : []),
-
-    {
-      id: 'transactions',
-      label: 'Transactions',
-      icon: '⇄',
-    },
-
-    ...(admin
-      ? [
-          {
-            id: 'stock',
-            label: 'Stock Management',
-            icon: '↕',
-          },
-        ]
-      : []),
-
-    {
-      id: 'history',
-      label: 'Stock History',
-      icon: '▤',
-    },
-
-    {
-      id: 'profile',
-      label: 'Profile',
-      icon: '◉',
-    },
-  ];
+const currentPage = nav.find(
+  (item) => item.id === view
+);
 
   let content;
 
@@ -4299,6 +4756,7 @@ function App() {
     );
   }
 
+  
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -4308,61 +4766,91 @@ function App() {
           </div>
 
           <div>
-            <strong>
-              Inventory
-            </strong>
-
-            <span>
-              Stock Management
-            </span>
+            <strong>Inventory</strong>
+            <span>Stock Management</span>
           </div>
         </div>
 
         <div className="user-mini">
-          <strong>
-            {user?.name}
-          </strong>
-
-          <span>
-            {user?.role}
-          </span>
+          <strong>{user?.name}</strong>
+          <span>{user?.role}</span>
         </div>
 
         <nav>
-          {nav.map((n) => (
-            <button
-              key={n.id}
-              className={
-                view === n.id
-                  ? 'nav-item active'
-                  : 'nav-item'
-              }
-              onClick={() =>
-                setView(n.id)
-              }
-            >
-              <span>
-                {n.icon}
-              </span>
+  {nav.map((n, index) => (
+    <div className="nav-entry" key={n.id}>
+      {(index === 0 || nav[index - 1].section !== n.section) && (
+        <div className="nav-section-title">
+          {n.section}
+        </div>
+      )}
 
-              {n.label}
-            </button>
-          ))}
-        </nav>
+      <button
+        type="button"
+        className={view === n.id ? 'nav-item active' : 'nav-item'}
+        onClick={() => navigateTo(n.id)} 
+      >
+        <span>{n.icon}</span>
+        {n.label}
+      </button>
+    </div>
+  ))}
+</nav>
 
         <button
+          type="button"
           className="logout-button"
           onClick={logout}
         >
           Logout
         </button>
+
+        <div className="page-navigation">
+          <button
+            type="button"
+            className="breadcrumb-back"
+            onClick={goBack}
+            disabled={viewHistory.length === 0}
+          >
+            ← Kembali
+          </button>
+
+          <div className="breadcrumb">
+            <span className="breadcrumb-home">
+              Beranda
+            </span>
+
+            <span className="breadcrumb-separator">
+              /
+            </span>
+
+            <span className="breadcrumb-current">
+              {currentPage?.label || 'Dashboard'}
+            </span>
+          </div>
+        </div>
       </aside>
 
       <main className="main-content">
-        {content}
-      </main>
+  
+
+  {content}
+</main>
+
+      {showBackToTop && (
+        <button
+          type="button"
+          className="back-to-top"
+          onClick={scrollToTop}
+          aria-label="Kembali ke atas"
+          title="Kembali ke atas"
+        >
+          ↑
+        </button>
+      )}
     </div>
   );
+
 }
 
 export default App;

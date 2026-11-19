@@ -649,7 +649,6 @@ function MasterPage({ type, canManage }) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   const load = async (targetPage = page) => {
     setLoading(true);
@@ -701,7 +700,6 @@ function MasterPage({ type, canManage }) {
 
     setLoading(true);
     setError('');
-    setSuccess('');
 
     try {
       if (modal === 'create') {
@@ -713,16 +711,20 @@ function MasterPage({ type, canManage }) {
         );
       }
 
-      setSuccess(
-        `${cfg.singular} berhasil disimpan.`
+      showToast(
+        modal === 'create'
+          ? `${cfg.singular} berhasil ditambahkan!`
+          : `${cfg.singular} berhasil diperbarui!`,
+        'success'
       );
-
       setModal(null);
       setForm({});
 
       await load(page);
     } catch (e) {
-      setError(messageFromError(e));
+      const errorMessage = messageFromError(e);
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -734,20 +736,22 @@ function MasterPage({ type, canManage }) {
     }
 
     setError('');
-    setSuccess('');
 
     try {
       await api.delete(
         `/${type}/${item.id}`
       );
 
-      setSuccess(
-        `${cfg.singular} berhasil dihapus.`
+      showToast(
+        `${cfg.singular} berhasil dihapus!`,
+        'success'
       );
 
       await load(page);
     } catch (e) {
-      setError(messageFromError(e));
+      const errorMessage = messageFromError(e);
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -770,12 +774,6 @@ function MasterPage({ type, canManage }) {
           )
         }
       />
-
-      {success && (
-        <Alert type="success">
-          {success}
-        </Alert>
-      )}
 
       {error && <Alert>{error}</Alert>}
 
@@ -1165,9 +1163,7 @@ function ProductPage({ canManage }) {
           emptyPagination
       );
     } catch (e) {
-      setError(
-        messageFromError(e)
-      );
+      setError(messageFromError(e));
     } finally {
       setLoading(false);
     }
@@ -1276,15 +1272,26 @@ function ProductPage({ canManage }) {
       setModal(null);
       setForm({});
 
-      setSuccess(
-        'Product berhasil disimpan.'
-      );
+      
+
+      showToast(
+  modal === 'create'
+    ? 'Product berhasil ditambahkan!'
+    : 'Product berhasil diperbarui!',
+  'success'
+);
+
 
       await load(page);
     } catch (e) {
       setError(
         messageFromError(e)
       );
+        showToast(
+    messageFromError(e),
+    'error'
+
+        );
     } finally {
       setLoading(false);
     }
@@ -1309,6 +1316,11 @@ function ProductPage({ canManage }) {
       setSuccess(
         'Product berhasil dihapus (soft delete).'
       );
+
+      showToast(
+  'Product berhasil dihapus!',
+  'success'
+);
 
       await load(page);
     } catch (e) {
@@ -1848,9 +1860,6 @@ function StockPage() {
   const [error, setError] =
     useState('');
 
-  const [success, setSuccess] =
-    useState('');
-
   const [loading, setLoading] =
     useState(false);
 
@@ -1882,7 +1891,6 @@ function StockPage() {
 
     setLoading(true);
     setError('');
-    setSuccess('');
 
     try {
       const path =
@@ -1930,7 +1938,7 @@ function StockPage() {
         payload
       );
 
-      setSuccess(
+      showToast(
         r.data.message ||
           'Stok berhasil diproses.'
       );
@@ -1956,12 +1964,6 @@ function StockPage() {
         title="Stock Management"
         subtitle="Stock In, Stock Out, dan Stock Adjustment."
       />
-
-      {success && (
-        <Alert type="success">
-          {success}
-        </Alert>
-      )}
 
       {error && (
         <Alert>
@@ -2132,6 +2134,12 @@ function StockHistoryPage() {
       setError(
         messageFromError(e)
       );
+
+      showToast(
+    messageFromError(e),
+    'error'
+  );
+
     } finally {
       setLoading(false);
     }
@@ -2549,17 +2557,20 @@ function TransactionsPage() {
         );
       }
 
-      setSuccess(
-        'Transaksi draft berhasil disimpan.'
-      );
+     showToast(
+  modal === 'create'
+    ? 'Transaksi draft berhasil ditambahkan!'
+    : 'Transaksi draft berhasil diperbarui!',
+  'success'
+);
 
       setModal(null);
 
       await load(page);
     } catch (e) {
-      setError(
-        messageFromError(e)
-      );
+      const errorMessage = messageFromError(e);
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -2582,15 +2593,16 @@ function TransactionsPage() {
           `/transactions/${id}/${path}`
         );
 
-      setSuccess(
-        r.data.message
+      showToast(
+        r.data.message,
+        'success'
       );
 
       await load(page);
     } catch (e) {
-      setError(
-        messageFromError(e)
-      );
+      const errorMessage = messageFromError(e);
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -2695,12 +2707,6 @@ function TransactionsPage() {
           </button>
         }
       />
-
-      {success && (
-        <Alert type="success">
-          {success}
-        </Alert>
-      )}
 
       {error && (
         <Alert>
@@ -4494,6 +4500,30 @@ function App() {
   const [showBackToTop, setShowBackToTop] =
     useState(false);
 
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    const handleToast = (event) => {
+      setToast(event.detail);
+    };
+
+    window.addEventListener('app-toast', handleToast);
+
+    return () => {
+      window.removeEventListener('app-toast', handleToast);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      setToast(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
+
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
@@ -4836,6 +4866,15 @@ const currentPage = nav.find(
 
   {content}
 </main>
+
+      {toast && (
+        <div
+          className={`app-toast app-toast-${toast.type || 'success'}`}
+          role={toast.type === 'error' ? 'alert' : 'status'}
+        >
+          {toast.message}
+        </div>
+      )}
 
       {showBackToTop && (
         <button

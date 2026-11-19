@@ -882,7 +882,37 @@ tbody tr:hover {
 
 
 /* ==========================================
-   21. BACK TO TOP
+   21. TOAST NOTIFICATION
+========================================== */
+
+.app-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 500;
+
+  max-width: min(420px, calc(100vw - 40px));
+  padding: 14px 18px;
+
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+
+  background: #f0fdf4;
+  color: #166534;
+
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+  overflow-wrap: anywhere;
+}
+
+.app-toast-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+
+/* ==========================================
+   22. BACK TO TOP
 ========================================== */
 
 .back-to-top {
@@ -920,7 +950,7 @@ tbody tr:hover {
 
 
 /* ==========================================
-   22. TABLET
+   23. TABLET
    Maksimal 1100px
 ========================================== */
 
@@ -940,7 +970,7 @@ tbody tr:hover {
 
 
 /* ==========================================
-   23. MOBILE DAN TABLET
+   24. MOBILE DAN TABLET
    Maksimal 800px
 ========================================== */
 
@@ -1126,7 +1156,7 @@ tbody tr:hover {
 
 
 /* ==========================================
-   24. SMARTPHONE
+   25. SMARTPHONE
    Maksimal 520px
 ========================================== */
 
@@ -1278,7 +1308,7 @@ tbody tr:hover {
 
 
 /* ==========================================
-   25. LAYAR SANGAT KECIL
+   26. LAYAR SANGAT KECIL
    Maksimal 360px
 ========================================== */
 

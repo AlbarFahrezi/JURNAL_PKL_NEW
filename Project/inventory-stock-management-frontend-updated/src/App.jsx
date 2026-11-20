@@ -2606,31 +2606,41 @@ function TransactionsPage() {
     }
   };
 
-  const remove = async (id) => {
-    if (
-      !confirm(
-        'Hapus draft transaksi ini?'
-      )
-    ) {
-      return;
-    }
+ 
+const remove = async (id) => {
+  if (
+    !confirm(
+      'Hapus draft transaksi ini?'
+    )
+  ) {
+    return;
+  }
 
-    try {
-      await api.delete(
-        `/transactions/${id}`
-      );
+  setError('');
 
-      setSuccess(
-        'Draft berhasil dihapus.'
-      );
+  try {
+    const r = await api.delete(
+      `/transactions/${id}`
+    );
 
-      await load(page);
-    } catch (e) {
-      setError(
-        messageFromError(e)
-      );
-    }
-  };
+    showToast(
+      r.data.message ||
+        'Draft transaksi berhasil dihapus!',
+      'success'
+    );
+
+    await load(page);
+  } catch (e) {
+    const errorMessage = messageFromError(e);
+
+    setError(errorMessage);
+
+    showToast(
+      errorMessage,
+      'error'
+    );
+  }
+};
 
   const openDetail = async (
     id
@@ -3864,57 +3874,57 @@ const transactions =
         </div>
       </section>
 
-      {loading && (
-  <div className="loading-message">
-    Memuat laporan...
-  </div>
-)}
+        {loading && (
+    <div className="loading-message">
+      Memuat laporan...
+    </div>
+  )}
 
 
-      {loading ? (
-        <section className="card">
-          <p>
-            Memuat preview laporan...
-          </p>
-        </section>
-      ) : report ? (
-        <section
-          className="report-preview"
-          id="report-print-area"
-        >
-          <div className="card">
-            <div className="report-header">
-              <div>
-                <h2>
-                  Laporan Inventory
-                </h2>
+        {loading ? (
+          <section className="card">
+            <p>
+              Memuat preview laporan...
+            </p>
+          </section>
+        ) : report ? (
+          <section
+            className="report-preview"
+            id="report-print-area"
+          >
+            <div className="card">
+              <div className="report-header">
+                <div>
+                  <h2>
+                    Laporan Inventory
+                  </h2>
 
-                <p>
-                  {mode === 'daily'
-                    ? `Tanggal: ${report.date}`
-                    : `Periode: ${report.date_from} s/d ${report.date_to}`}
-                </p>
+                  <p>
+                    {mode === 'daily'
+                      ? `Tanggal: ${report.date}`
+                      : `Periode: ${report.date_from} s/d ${report.date_to}`}
+                  </p>
 
-                {mode === 'period' && (
-                  <>
-                    <p>
-                      Tipe:{' '}
-                      {report.filter?.type ===
-                      'all'
-                        ? 'Semua'
-                        : report.filter?.type ||
-                          'Semua'}
-                    </p>
+                  {mode === 'period' && (
+                    <>
+                      <p>
+                        Tipe:{' '}
+                        {report.filter?.type ===
+                        'all'
+                          ? 'Semua'
+                          : report.filter?.type ||
+                            'Semua'}
+                      </p>
 
-                    <p>
-                      Tampilan:{' '}
-                      {view === 'summary'
-                        ? 'Summary'
-                        : 'Detail'}
-                    </p>
-                  </>
-                )}
-              </div>
+                      <p>
+                        Tampilan:{' '}
+                        {view === 'summary'
+                          ? 'Summary'
+                          : 'Detail'}
+                      </p>
+                    </>
+                  )}
+                </div>
 
               <div className="report-status">
                 Preview
